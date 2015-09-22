@@ -21,3 +21,12 @@ RUN wget http://packages.couchbase.com/releases/4.0.0-rc0/couchbase-server-commu
 #Add runit services
 COPY sv /etc/service 
 
+#Initialize
+RUN runsvdir-start & \
+    until curl http://127.0.0.1:8091; do echo "waiting for API server to come online..."; sleep 3; done && \
+    mkdir -p /tmp/couchbase-data /tmp/couchbase-index && \
+    /opt/couchbase/bin/couchbase-cli node-init -c localhost --node-init-data-path=/tmp/couchbase-data --node-init-index-path=/tmp/couchbase-index --user=admin --password=password && \
+    /opt/couchbase/bin/couchbase-cli cluster-init -c localhost --cluster-init-username=admin --cluster-init-password=password --cluster-ramsize=300 --services=data,index,query && \
+    /opt/couchbase/bin/couchbase-cli bucket-create -c localhost --bucket=data --bucket-type=couchbase --bucket-ramsize=200 --bucket-replica=1 --user=admin --password=password && \
+    sv stop couchbase
+  
